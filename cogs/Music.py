@@ -29,6 +29,15 @@ class Music(commands.Cog):
 
     @commands.command(aliases=['tocar','zinho'])
     async def play(self, ctx: commands.Context, *, search: str):
+
+        async def playTrack(vc, ctx, track: Union[wavelink.YouTubeTrack,spotify.SpotifyTrack]):
+            if vc.queue.is_empty and not vc.is_playing():
+                await vc.play(track)
+                await ctx.send(f"Tocando `{track.title}`")
+            else:
+                await vc.queue.put_wait(track)
+                await ctx.send(f"`{track.title}` adicionado à fila")
+
         if not getattr(ctx.author.voice, "channel", None):
             return await ctx.send("Você não está em um canal de voz Burro!")
         elif not ctx.voice_client:
@@ -37,22 +46,22 @@ class Music(commands.Cog):
             vc: wavelink.Player = ctx.voice_client
 
         if(search.startswith("https://open.spotify.com/")):
-            print(f"Spotify Track: {search}")
-            track = await spotify.SpotifyTrack.search(query=search, return_first=True)
-        else:
-            print(f"Youtube Track: {search}")
-            track = await wavelink.YouTubeTrack.search(query=search, return_first=True)
-            
-        if vc.queue.is_empty and not vc.is_playing():
-            await vc.play(track)
-            await ctx.send(f"Tocando `{track.title}`")
-        else:
-            await vc.queue.put_wait(track)
-            await ctx.send(f"`{track.title}` adicionado à fila")
+            decoded = spotify.decode_url(search)
 
-        # vc.ctx = ctx
-        # setattr(vc, "loop", False)
-        
+            if decoded and decoded['type'] is spotify.SpotifySearchType.track:
+                track = await spotify.SpotifyTrack.search(query=search, return_first=True)
+                print(f"Spotify Track: {track.title}")
+                await playTrack(vc, ctx, track)
+            elif decoded and decoded['type'] is spotify.SpotifySearchType.playlist:
+                print(f"Spotify Playlist: {search}")
+
+                async for track in spotify.SpotifyTrack.iterator(query=search, type=spotify.SpotifySearchType.playlist):
+                    print(f"Spotify Track: {track.title}")
+                    await playTrack(vc, ctx, track)
+        else:
+            track = await wavelink.YouTubeTrack.search(query=search, return_first=True)
+            print(f"Youtube Track: {track.title}")
+            await playTrack(vc, ctx, track)
 
     @commands.command()
     async def pause(self, ctx: commands.Context):
@@ -108,9 +117,22 @@ class Music(commands.Cog):
             return await ctx.send("Você não está em um canal de voz Burro!")
         else:
             vc: wavelink.Player = ctx.voice_client
-            
+
         await vc.stop()
         await ctx.send("Música pulada!")
+
+    @commands.command()
+    async def remove(self, ctx: commands.Context, *, index: int):
+        if not ctx.voice_client:
+            return await ctx.send("Nenhuma Música tocando Burro!")
+        elif not getattr(ctx.author.voice, "channel", None):
+            return await ctx.send("Você não está em um canal de voz Burro!")
+        else:
+            vc: wavelink.Player = ctx.voice_client
+        
+        if(index > 0):
+            del vc.queue._queue[index-1]
+            await ctx.send(f"Música #{index} Removida da Fila!")
 
     @commands.command(aliases=['tocando'])
     async def playing(self, ctx: commands.Context):
