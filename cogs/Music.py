@@ -8,7 +8,6 @@ from typing import Union
 class Music(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-    
 
     @commands.Cog.listener()
     async def on_wavelink_track_end(self, player: wavelink.Player, track: Union[wavelink.YouTubeTrack,spotify.SpotifyTrack], reason):    
@@ -30,13 +29,17 @@ class Music(commands.Cog):
     @commands.command(aliases=['tocar','zinho'])
     async def play(self, ctx: commands.Context, *, search: str):
 
+        if(ctx.channel.id != 1117561338030465155):
+            await ctx.send("Esse comando só pode ser usado no canal canto-do-cezar!")
+            return
+
         async def playTrack(vc, ctx, track: Union[wavelink.YouTubeTrack,spotify.SpotifyTrack]):
             if vc.queue.is_empty and not vc.is_playing():
                 await vc.play(track)
-                await ctx.send(f"Tocando `{track.title}`")
+                return True
             else:
                 await vc.queue.put_wait(track)
-                await ctx.send(f"`{track.title}` adicionado à fila")
+                return False
 
         if not getattr(ctx.author.voice, "channel", None):
             return await ctx.send("Você não está em um canal de voz Burro!")
@@ -51,20 +54,43 @@ class Music(commands.Cog):
             if decoded and decoded['type'] is spotify.SpotifySearchType.track:
                 track = await spotify.SpotifyTrack.search(query=search, return_first=True)
                 print(f"Spotify Track: {track.title}")
-                await playTrack(vc, ctx, track)
+                if(await playTrack(vc, ctx, track)):
+                    await ctx.send(f"Tocando `{track.title}`")
+                else:
+                    await ctx.send(f"`{track.title}` adicionado à fila")
             elif decoded and decoded['type'] is spotify.SpotifySearchType.playlist:
                 print(f"Spotify Playlist: {search}")
-
+                await ctx.send(f"Adding musics from Spotify Playlist: {decoded}...")
+                numMusicAdded = 0
                 async for track in spotify.SpotifyTrack.iterator(query=search, type=spotify.SpotifySearchType.playlist):
                     print(f"Spotify Track: {track.title}")
+                    numMusicAdded += 1
                     await playTrack(vc, ctx, track)
+                await ctx.send(f"Added {numMusicAdded} musics from Spotify Playlist")
+            elif decoded and decoded['type'] is spotify.SpotifySearchType.album:
+                print(f"Adding musics from Spotify Album: {search}...")
+                await ctx.send(f"Adding musics from Spotify Album: {search}...")
+                numMusicAdded = 0
+                async for track in spotify.SpotifyTrack.iterator(query=search, type=spotify.SpotifySearchType.album):
+                    print(f"Spotify Track: {track.title}")
+                    numMusicAdded += 1
+                    await playTrack(vc, ctx, track)
+                await ctx.send(f"Added {numMusicAdded} musics from Spotify Album")
+
         else:
             track = await wavelink.YouTubeTrack.search(query=search, return_first=True)
             print(f"Youtube Track: {track.title}")
-            await playTrack(vc, ctx, track)
+            if(await playTrack(vc, ctx, track)):
+                    await ctx.send(f"Tocando `{track.title}`")
+            else:
+                await ctx.send(f"`{track.title}` adicionado à fila")
 
     @commands.command()
     async def pause(self, ctx: commands.Context):
+        if(ctx.channel.id != 1117561338030465155):
+            await ctx.send("Esse comando só pode ser usado no canal canto-do-cezar!")
+            return
+
         if not ctx.voice_client:
             return await ctx.send("Nenhuma Música tocando Burro!")
         elif not getattr(ctx.author.voice, "channel", None):
@@ -77,6 +103,10 @@ class Music(commands.Cog):
 
     @commands.command()
     async def resume(self, ctx: commands.Context):
+        if(ctx.channel.id != 1117561338030465155):
+            await ctx.send("Esse comando só pode ser usado no canal canto-do-cezar!")
+            return
+
         if not ctx.voice_client:
             return await ctx.send("Nenhuma Música tocando Burro!")
         elif not getattr(ctx.author.voice, "channel", None):
@@ -89,6 +119,10 @@ class Music(commands.Cog):
 
     @commands.command(aliases=['queue'])
     async def fila(self, ctx: commands.Context):
+        if(ctx.channel.id != 1117561338030465155):
+            await ctx.send("Esse comando só pode ser usado no canal canto-do-cezar!")
+            return
+        
         if not ctx.voice_client:
             return await ctx.send("Nenhuma Música tocando Burro!")
         elif not getattr(ctx.author.voice, "channel", None):
@@ -111,6 +145,10 @@ class Music(commands.Cog):
 
     @commands.command(aliases=['pular'])
     async def skip(self, ctx: commands.Context):
+        if(ctx.channel.id != 1117561338030465155):
+            await ctx.send("Esse comando só pode ser usado no canal canto-do-cezar!")
+            return
+
         if not ctx.voice_client:
             return await ctx.send("Nenhuma Música tocando Burro!")
         elif not getattr(ctx.author.voice, "channel", None):
@@ -123,6 +161,10 @@ class Music(commands.Cog):
 
     @commands.command()
     async def remove(self, ctx: commands.Context, *, index: int):
+        if(ctx.channel.id != 1117561338030465155):
+            await ctx.send("Esse comando só pode ser usado no canal canto-do-cezar!")
+            return
+
         if not ctx.voice_client:
             return await ctx.send("Nenhuma Música tocando Burro!")
         elif not getattr(ctx.author.voice, "channel", None):
@@ -136,6 +178,10 @@ class Music(commands.Cog):
 
     @commands.command(aliases=['tocando'])
     async def playing(self, ctx: commands.Context):
+        if(ctx.channel.id != 1117561338030465155):
+            await ctx.send("Esse comando só pode ser usado no canal canto-do-cezar!")
+            return
+
         if not ctx.voice_client:
             return await ctx.send("Nenhuma Música tocando Burro!")
         elif not getattr(ctx.author.voice, "channel", None):
@@ -154,6 +200,10 @@ class Music(commands.Cog):
     
     @commands.command(aliases=['lume'])
     async def volume(self, ctx: commands.Context, volume: int = None):
+        if(ctx.channel.id != 1117561338030465155):
+            await ctx.send("Esse comando só pode ser usado no canal canto-do-cezar!")
+            return
+
         if not ctx.voice_client:
             return await ctx.send("Nenhuma Música tocando Burro!")
         elif not getattr(ctx.author.voice, "channel", None):
